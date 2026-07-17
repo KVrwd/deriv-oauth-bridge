@@ -1,19 +1,39 @@
 <!DOCTYPE html>
 <html>
-<body>
-    <h1 id="status">Loading...</h1>
+<head>
+    <title>Connecting to KayVee...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
+    <div>
+        <h2>Authenticating...</h2>
+        <p>Redirecting you to KayVee app.</p>
+    </div>
+
     <script>
-        const params = window.location.search;
-        const status = document.getElementById('status');
+        // 1. Capture the query parameters Deriv sent (token1, acct1, cur1, etc.)
+        const params = new URLSearchParams(window.location.search);
         
-        if (params.includes('token')) {
-            status.innerText = "Token found! Redirecting...";
-            const targetUrl = 'kayvee://login' + params;
-            window.location.href = targetUrl;
-        } else {
-            status.innerText = "No token found in URL. Check Deriv settings.";
-            console.log("Current URL params:", params);
-        }
+        // 2. Build the app deep link
+        // This takes whatever Deriv sent (e.g., ?token1=...&acct1=...) 
+        // and attaches it to your app's scheme (kayvee://)
+        const deepLink = `kayvee://?${params.toString()}`;
+        
+        // 3. Trigger the redirect
+        console.log("Redirecting to:", deepLink);
+        window.location.href = deepLink;
+        
+        // 4. Fallback if the app doesn't open
+        setTimeout(() => {
+            document.body.innerHTML = `
+                <div style="text-align: center;">
+                    <p>If the app didn't open automatically:</p>
+                    <a href="${deepLink}" style="padding: 15px; background: #000; color: #fff; text-decoration: none; border-radius: 8px;">
+                        Open KayVee App
+                    </a>
+                </div>
+            `;
+        }, 2000);
     </script>
 </body>
 </html>
