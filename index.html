@@ -1,39 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Connecting to KayVee...</title>
+    <title>KayVee OAuth Bridge — Debug</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #0B0B0C; color: #F5F5F4; margin: 0; padding: 24px; min-height: 100vh; box-sizing: border-box; }
+        .card { max-width: 480px; margin: 40px auto 0; background: #17181B; border: 1px solid #2A2B2E; border-radius: 16px; padding: 24px; }
+        h2 { margin-top: 0; }
+        .label { color: #A3A3A6; font-size: 12px; letter-spacing: 0.4px; margin-top: 20px; }
+        .value { font-family: monospace; font-size: 14px; word-break: break-all; background: #0B0B0C; border: 1px solid #2A2B2E; border-radius: 8px; padding: 12px; margin-top: 6px; }
+        .ok { color: #34C77B; } .bad { color: #E1554F; }
+        table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        td { padding: 6px 0; border-bottom: 1px solid #2A2B2E; font-size: 14px; }
+        td:first-child { color: #A3A3A6; width: 90px; }
+        a.button { display: block; text-align: center; margin-top: 24px; padding: 14px; background: #F5F5F4; color: #0B0B0C; text-decoration: none; border-radius: 999px; font-weight: 600; }
+    </style>
 </head>
-<body style="font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0;">
-    <div>
-        <h2>Authenticating...</h2>
-        <p>Redirecting you to KayVee app.</p>
+<body>
+    <div class="card">
+        <h2>OAuth Bridge — Debug Mode</h2>
+        <p>This page won't auto-redirect anywhere — not into the app, not to home.deriv.com — so you can see exactly what Deriv sent back.</p>
+        <div class="label">FULL RAW URL RECEIVED</div>
+        <div class="value" id="rawUrl"></div>
+        <div class="label">QUERY PARAMETERS</div>
+        <table id="paramsTable"></table>
+        <div class="label">WHAT THIS MEANS</div>
+        <div class="value" id="diagnosis"></div>
+        <a class="button" id="continueBtn" href="#" style="display:none;">Open KayVee app now</a>
     </div>
-
     <script>
-        // 1. Capture the query parameters Deriv sent (token1, acct1, cur1, etc.)
+        const rawUrl = window.location.href;
+        document.getElementById('rawUrl').textContent = rawUrl;
         const params = new URLSearchParams(window.location.search);
-        
-        // 2. Build the app deep link
-        // This takes whatever Deriv sent (e.g., ?token1=...&acct1=...) 
-        // and attaches it to your app's scheme (kayvee://)
-        const deepLink = `kayvee://?${params.toString()}`;
-        
-        // 3. Trigger the redirect
-        console.log("Redirecting to:", deepLink);
-        window.location.href = deepLink;
-        
-        // 4. Fallback if the app doesn't open
-        setTimeout(() => {
-            document.body.innerHTML = `
-                <div style="text-align: center;">
-                    <p>If the app didn't open automatically:</p>
-                    <a href="${deepLink}" style="padding: 15px; background: #000; color: #fff; text-decoration: none; border-radius: 8px;">
-                        Open KayVee App
-                    </a>
-                </div>
-            `;
-        }, 2000);
+        const table = document.getElementById('paramsTable');
+        const diagnosisEl = document.getElementById('diagnosis');
+        const continueBtn = document.getElementById('continueBtn');
+        if ([...params].length === 0) {
+            table.innerHTML = '<tr><td colspan="2" class="bad">No query parameters at all.</td></tr>';
+            diagnosisEl.innerHTML = '<span class="bad">Deriv redirected here, but sent nothing back.</span> The problem is upstream of this page — most likely the app_id used to build the login URL doesn\u2019t match what\u2019s registered on developers.deriv.com, or the redirect URL registered there doesn\u2019t exactly match this page\u2019s URL (trailing slash included). Check both on developers.deriv.com \u2192 Registered apps.';
+        } else {
+            let rows = '';
+            for (const [key, value] of params) { rows += `<tr><td>${key}</td><td class="value" style="margin:0;padding:4px 8px;">${value}</td></tr>`; }
+            table.innerHTML = rows;
+            const hasToken = params.has('token1') && params.has('acct1');
+            if (hasToken) {
+                diagnosisEl.innerHTML = '<span class="ok">Deriv sent back a real token1/acct1 pair \u2014 the OAuth login itself worked.</span> If the app still isn\u2019t receiving this, the problem is specifically the handoff into the app, not Deriv, not your app_id.';
+                continueBtn.href = `kayvee://?${params.toString()}`;
+                continueBtn.style.display = 'block';
+            } else {
+                diagnosisEl.innerHTML = '<span class="bad">Parameters came back, but no token1/acct1 pair.</span> Read what\u2019s in the table above \u2014 Deriv sometimes sends an "error" or "error_description" parameter explaining exactly why.';
+            }
+        }
     </script>
 </body>
 </html>
